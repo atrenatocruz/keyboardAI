@@ -42,4 +42,7 @@ describe("validateRequest", () => {
     expect(validateRequest(ID, { text: "a".repeat(MAX_TEXT_LENGTH + 1), mood: "direto" }).ok).toBe(false);
     expect(validateRequest(ID, { text: "👋🏽".repeat(MAX_TEXT_LENGTH), mood: "direto" }).ok).toBe(true);
   });
+  it("rejects huge bodies before grapheme segmentation", () => {
+    expect(validateRequest(ID, { text: "a".repeat(9000), mood: "direto" }).ok).toBe(false);
+  });
 });

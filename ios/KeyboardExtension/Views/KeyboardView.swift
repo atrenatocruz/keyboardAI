@@ -59,7 +59,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         keyViews.forEach { $0.removeFromSuperview() }
         // Release held keys first so timers, popup, picker and highlights don't outlive their views.
-        active.values.forEach(release)
+        active.values.forEach(releaseKey)
         active.removeAll()
         builtKeys = keys
         keyViews = keys.map { key in
@@ -175,7 +175,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             // Rollover: a new touch commits any key still held.
             for (id, held) in active where id != ObjectIdentifier(touch) {
                 if accentPicker.isHidden { commit(held) }
-                release(held)
+                releaseKey(held)
                 active[id] = nil
             }
             guard let keyView = nearestKey(to: touch.location(in: self)) else { continue }
@@ -195,7 +195,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             guard case .character = current.key,
                   let target = nearestKey(to: point), target !== current,
                   case .character = target.key else { continue }
-            release(current)
+            releaseKey(current)
             active[ObjectIdentifier(touch)] = target
             press(target, silent: true)
         }
@@ -209,13 +209,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             } else {
                 commit(keyView)
             }
-            release(keyView)
+            releaseKey(keyView)
         }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            if let keyView = active.removeValue(forKey: ObjectIdentifier(touch)) { release(keyView) }
+            if let keyView = active.removeValue(forKey: ObjectIdentifier(touch)) { releaseKey(keyView) }
         }
     }
 
@@ -260,7 +260,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
     }
 
-    private func release(_ keyView: KeyCapView) {
+    private func releaseKey(_ keyView: KeyCapView) {
         keyView.isHighlighted = false
         longPressTimer?.invalidate()
         longPressTimer = nil

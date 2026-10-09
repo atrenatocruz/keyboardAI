@@ -19,6 +19,7 @@ export function validateRequest(installId: string | null, body: unknown): Valida
   if (typeof body !== "object" || body === null) return { ok: false };
   const { text, mood } = body as Record<string, unknown>;
   if (typeof text !== "string" || text.trim().length === 0) return { ok: false };
+  if (text.length > MAX_TEXT_LENGTH * 8) return { ok: false };
   if (graphemeLength(text) > MAX_TEXT_LENGTH) return { ok: false };
   if (!isMood(mood)) return { ok: false };
   return { ok: true, value: { installId: installId.toLowerCase(), text, mood } };

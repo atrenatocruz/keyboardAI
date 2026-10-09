@@ -15,6 +15,7 @@ final class KeyboardViewController: UIInputViewController {
         let input = UIInputView(frame: .zero, inputViewStyle: .keyboard)
         input.allowsSelfSizing = true
         inputView = input
+        view = input
     }
 
     override func viewDidLoad() {

@@ -31,6 +31,6 @@ export function buildSystemPrompt(mood: Mood): string {
 }
 
 export function buildUserMessage(text: string): string {
-  const safe = text.replaceAll("</texto>", "</ texto>");
+  const safe = text.replace(/<\/\s*texto\s*>/gi, "</ texto>");
   return `<texto>\n${safe}\n</texto>`;
 }

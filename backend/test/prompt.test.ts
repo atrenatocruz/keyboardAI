@@ -28,4 +28,9 @@ describe("buildUserMessage", () => {
     expect(msg.match(/<\/texto>/g)?.length).toBe(1);
     expect(msg.endsWith("\n</texto>")).toBe(true);
   });
+  it("escapes closing-tag variants case-insensitively", () => {
+    const msg = buildUserMessage("a </TEXTO> b </texto > c");
+    expect(msg.match(/<\/\s*texto\s*>/gi)?.length).toBe(1);
+    expect(msg.endsWith("\n</texto>")).toBe(true);
+  });
 });

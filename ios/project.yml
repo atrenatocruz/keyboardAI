@@ -9,7 +9,7 @@ configFiles:
   Release: Config/Base.xcconfig
 settings:
   base:
-    SWIFT_VERSION: "5.9"
+    SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
     TARGETED_DEVICE_FAMILY: "1"
 packages:
@@ -44,6 +44,8 @@ targets:
         CFBundleDisplayName: KeyboardAI
         CFBundleDevelopmentRegion: pt-PT
         KeyboardAIBaseURL: $(API_BASE_URL)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController

@@ -25,6 +25,8 @@ Apps: WhatsApp, Instagram (DM), iMessage, Mail, Notas.
 - [ ] Sem Acesso total → aviso para ativar.
 - [ ] Mudar de conversa durante o pedido → "O texto mudou", nada é substituído.
 - [ ] Emojis e acentos no texto são preservados.
+- [ ] Selecionar texto num campo web (Safari/WKWebView), Notas e WhatsApp e tocar em ✨: só a seleção é substituída e nenhum texto antes dela é apagado.
+- [ ] Tecla da fila de cima premida: o popup e os acentos aparecem por inteiro (não cortados).
 
 ## Acessibilidade
 - [ ] Reduzir movimento: seletor de mood em cross-fade.

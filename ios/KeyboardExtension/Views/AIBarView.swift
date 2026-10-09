@@ -109,7 +109,8 @@ final class AIBarView: UIView {
         transition { self.undoButton.alpha = 0; self.messageLabel.alpha = 1 }
         let work = DispatchWorkItem { [weak self] in self?.showIdle() }
         messageWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: work)
+        let delay: TimeInterval = message == .unchanged ? 1.5 : 2.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     /// Critically damped, interruptible (starts from the current presentation value).
