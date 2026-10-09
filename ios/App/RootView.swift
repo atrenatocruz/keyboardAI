@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct RootView: View {
+    @AppStorage("onboardingDone") private var onboardingDone = false
+
     var body: some View {
-        Text("KeyboardAI")
-            .font(.largeTitle.weight(.semibold))
+        if onboardingDone {
+            MoodsView(onReplayOnboarding: { onboardingDone = false })
+        } else {
+            OnboardingView(onFinish: { onboardingDone = true })
+        }
     }
 }
