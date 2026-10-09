@@ -38,7 +38,7 @@ public enum KeyboardLayout {
         case .symbols:
             return [
                 c("[ ] { } # % ^ * + ="),
-                c("_ \ | ~ < > « » £ $"),
+                c("_ \\ | ~ < > « » £ $"),
                 [.page(.numbers)] + punctuation + [.delete],
                 bottom,
             ]
