@@ -18,7 +18,7 @@ for (const mood of moods) {
     } catch (err) {
       out = `**ERRO** ${(err as Error).message}`;
     }
-    const cell = (s: string) => s.replaceAll("|", "\|").replaceAll("\n", "<br>");
+    const cell = (s: string) => s.replaceAll("|", "\\|").replaceAll("\n", "<br>");
     lines.push(`| ${i + 1} | ${cell(text)} | ${cell(out)} |`);
     process.stdout.write(".");
   }
