@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+.dev.vars
+backend/eval/report.md
+ios/Config/Secrets.xcconfig
+ios/*.xcodeproj
+DerivedData/
+.build/
+.swiftpm/
+xcuserdata/
+.DS_Store
