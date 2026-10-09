@@ -10,5 +10,5 @@ GLOBAL_DAILY_LIMIT = "1000"
 [[d1_databases]]
 binding = "DB"
 database_name = "keyboardai"
-database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+database_id = "c3b1c208-38b7-4582-879c-dbdd18550fd3"
 migrations_dir = "migrations"
