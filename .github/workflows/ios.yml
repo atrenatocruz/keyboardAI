@@ -1,0 +1,66 @@
+name: iOS
+
+on:
+  push:
+    branches: [main, "ci/**"]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Test KeyboardCore
+        working-directory: ios/Packages/KeyboardCore
+        run: swift test
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Write Secrets.xcconfig
+        working-directory: ios
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          url="${API_BASE_URL:-https://keyboardai.example.workers.dev}"
+          # xcconfig treats // as a comment, so escape it as /$()/
+          printf 'API_BASE_URL = %s\n' "${url/:\/\//:\/\$()\/}" > Config/Secrets.xcconfig
+          cat Config/Secrets.xcconfig
+
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build unsigned app
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project KeyboardAI.xcodeproj \
+            -scheme KeyboardAI \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build > build.log 2>&1 || { grep -E "error:" build.log | sort -u | head -80; tail -n 40 build.log; exit 1; }
+          grep -E "BUILD SUCCEEDED" build.log
+
+      - name: Package IPA
+        working-directory: ios
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/KeyboardAI.app Payload/
+          ls Payload/KeyboardAI.app/PlugIns
+          zip -qry KeyboardAI-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KeyboardAI-unsigned-ipa
+          path: ios/KeyboardAI-unsigned.ipa
+          retention-days: 30
