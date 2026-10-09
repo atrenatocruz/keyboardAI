@@ -1,0 +1,59 @@
+name: KeyboardAI
+options:
+  bundleIdPrefix: com.renatocruz
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+packages:
+  KeyboardCore:
+    path: Packages/KeyboardCore
+targets:
+  KeyboardAI:
+    type: application
+    platform: iOS
+    sources: [App]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: KeyboardAI
+        CFBundleDevelopmentRegion: pt-PT
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.renatocruz.keyboardai
+    dependencies:
+      - package: KeyboardCore
+      - target: KeyboardAIKeyboard
+        embed: true
+  KeyboardAIKeyboard:
+    type: app-extension
+    platform: iOS
+    sources: [KeyboardExtension]
+    info:
+      path: KeyboardExtension/Info.plist
+      properties:
+        CFBundleDisplayName: KeyboardAI
+        CFBundleDevelopmentRegion: pt-PT
+        KeyboardAIBaseURL: $(API_BASE_URL)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: pt-PT
+            RequestsOpenAccess: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.renatocruz.keyboardai.keyboard
+    dependencies:
+      - package: KeyboardCore
