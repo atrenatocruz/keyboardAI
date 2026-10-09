@@ -7,7 +7,9 @@ final class KeyboardViewController: UIInputViewController {
     let haptics = Haptics()
     let keyboardView = KeyboardView()
     let contentStack = UIStackView()
-    private var lastSyncedContext: String?
+    let aiBar = AIBarView()
+    var improveState = ImproveState()
+    var lastSyncedContext: String?
 
     override func loadView() {
         let input = UIInputView(frame: .zero, inputViewStyle: .keyboard)
@@ -18,6 +20,7 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         contentStack.axis = .vertical
+        contentStack.addArrangedSubview(aiBar)
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         contentStack.addArrangedSubview(keyboardView)
         view.addSubview(contentStack)
@@ -34,6 +37,7 @@ final class KeyboardViewController: UIInputViewController {
 
         keyboardView.onKeyDown = { [weak self] in self?.haptics.keyTap() }
         keyboardView.onInput = { [weak self] input in self?.handle(input) }
+        setUpAI()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -64,12 +68,19 @@ final class KeyboardViewController: UIInputViewController {
         }
         keyboardView.returnTitle = returnKeyTitle(for: proxy.returnKeyType)
         keyboardView.state = engine.state
+        refreshImproveAvailability()
     }
 
-    /// Hook for the AI layer (Task 14): called before any key changes the text.
-    func willHandleKeyInput() {}
+    /// Any key press clears the pending undo (spec §4).
+    func willHandleKeyInput() {
+        if improveState.lastImprove != nil {
+            improveState.lastImprove = nil
+            aiBar.showIdle()
+        }
+    }
 
     private func handle(_ input: KeyboardView.Input) {
+        guard !improveState.isImproving else { return }
         willHandleKeyInput()
         switch input {
         case .key(.character(let c)): perform(.character(c))
