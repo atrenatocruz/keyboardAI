@@ -112,6 +112,11 @@ extension KeyboardViewController {
 
     func undoImprove() {
         guard let last = improveState.lastImprove else { return }
+        guard textDocumentProxy.documentContextBeforeInput?.hasSuffix(last.replacement) == true else {
+            improveState.lastImprove = nil
+            aiBar.show(.contextChanged)
+            return
+        }
         apply(TextReplacer.undoActions(for: last.target, replacement: last.replacement))
         improveState.lastImprove = nil
         aiBar.showIdle()

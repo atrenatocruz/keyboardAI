@@ -70,7 +70,8 @@ final class AIBarView: UIView {
             messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
         mood = .natural
-        showIdle()
+        undoButton.alpha = 0
+        messageLabel.alpha = 0
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

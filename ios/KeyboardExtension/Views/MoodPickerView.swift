@@ -10,6 +10,7 @@ final class MoodPickerView: UIView {
     private let panel = UIVisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))
     private let stack = UIStackView()
     private var anchor: CGRect = .zero
+    private var isDismissing = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -28,6 +29,8 @@ final class MoodPickerView: UIView {
 
     func present(from anchor: CGRect, in container: UIView, selected: Mood) {
         self.anchor = anchor
+        isDismissing = false
+        isUserInteractionEnabled = true
         frame = container.bounds
         container.addSubview(self)
         backdrop.frame = bounds
@@ -41,6 +44,7 @@ final class MoodPickerView: UIView {
             config.imagePlacement = .trailing
             config.baseForegroundColor = .label
             config.titleAlignment = .leading
+            config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8)
             let button = UIButton(configuration: config)
             button.contentHorizontalAlignment = .fill
             button.accessibilityTraits = mood == selected ? [.button, .selected] : .button
@@ -52,7 +56,8 @@ final class MoodPickerView: UIView {
         }
 
         let width = min(bounds.width - 16, 300)
-        let height = min(CGFloat(Mood.allCases.count) * 44, bounds.height - 8)
+        let rowHeight: CGFloat = 52
+        let height = min(CGFloat(Mood.allCases.count) * rowHeight, bounds.height - 8)
         panel.frame = CGRect(x: 8, y: 4, width: width, height: height)
         stack.frame = panel.bounds.insetBy(dx: 8, dy: 4)
 
@@ -71,6 +76,9 @@ final class MoodPickerView: UIView {
     }
 
     func dismiss() {
+        guard !isDismissing else { return }
+        isDismissing = true
+        isUserInteractionEnabled = false
         let finish = { [weak self] in
             self?.removeFromSuperview()
             self?.onDismiss?()

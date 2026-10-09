@@ -68,6 +68,11 @@ final class KeyboardViewController: UIInputViewController {
         }
         keyboardView.returnTitle = returnKeyTitle(for: proxy.returnKeyType)
         keyboardView.state = engine.state
+        if let last = improveState.lastImprove,
+           textDocumentProxy.documentContextBeforeInput?.hasSuffix(last.replacement) != true {
+            improveState.lastImprove = nil
+            aiBar.showIdle()
+        }
         refreshImproveAvailability()
     }
 
