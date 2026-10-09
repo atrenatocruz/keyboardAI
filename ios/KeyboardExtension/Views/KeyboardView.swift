@@ -58,6 +58,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             return
         }
         keyViews.forEach { $0.removeFromSuperview() }
+        // Release held keys first so timers, popup, picker and highlights don't outlive their views.
+        active.values.forEach(release)
         active.removeAll()
         builtKeys = keys
         keyViews = keys.map { key in
@@ -272,7 +274,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         repeatCount = 0
         repeatTimer?.invalidate()
         repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
-            self?.scheduleRepeat(interval: 0.1)
+            guard let self else { return }
+            self.onInput?(.key(.delete))
+            self.repeatCount += 1
+            self.scheduleRepeat(interval: 0.1)
         }
     }
 

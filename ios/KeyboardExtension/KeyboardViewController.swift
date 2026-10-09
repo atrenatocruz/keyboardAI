@@ -7,6 +7,7 @@ final class KeyboardViewController: UIInputViewController {
     let haptics = Haptics()
     let keyboardView = KeyboardView()
     let contentStack = UIStackView()
+    private var lastSyncedContext: String?
 
     override func loadView() {
         let input = UIInputView(frame: .zero, inputViewStyle: .keyboard)
@@ -39,6 +40,7 @@ final class KeyboardViewController: UIInputViewController {
         super.viewWillAppear(animated)
         haptics.isEnabled = hasFullAccess && settings.hapticsEnabled
         haptics.prepare()
+        lastSyncedContext = nil
         syncWithDocument()
     }
 
@@ -55,7 +57,11 @@ final class KeyboardViewController: UIInputViewController {
     func syncWithDocument() {
         let proxy = textDocumentProxy
         engine.autoCapitalizationEnabled = (proxy.autocapitalizationType ?? .sentences) != .none
-        engine.updateAutoCapitalization(contextBefore: proxy.documentContextBeforeInput)
+        let context = proxy.documentContextBeforeInput
+        if context != lastSyncedContext {
+            engine.updateAutoCapitalization(contextBefore: context)
+            lastSyncedContext = context
+        }
         keyboardView.returnTitle = returnKeyTitle(for: proxy.returnKeyType)
         keyboardView.state = engine.state
     }
@@ -74,13 +80,17 @@ final class KeyboardViewController: UIInputViewController {
         case .key(.nextKeyboard): advanceToNextInputMode()
         case .key(.shift): break
         case .shiftTap(let doubleTap): perform(.shift(doubleTap: doubleTap))
-        case .accent(let accent): apply([.insert(accent)]); syncWithDocument()
+        case .accent(let accent):
+            apply([.insert(accent)])
+            lastSyncedContext = nil   // force re-evaluation of auto-caps after the accent
+            syncWithDocument()
         }
     }
 
     func perform(_ event: KeyEvent) {
         apply(engine.handle(event, contextBefore: textDocumentProxy.documentContextBeforeInput))
         keyboardView.state = engine.state
+        lastSyncedContext = textDocumentProxy.documentContextBeforeInput
     }
 
     func apply(_ actions: [TextAction]) {
