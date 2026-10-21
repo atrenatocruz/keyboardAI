@@ -9,7 +9,8 @@ struct ImproveState {
 extension KeyboardViewController {
     private var client: ImproveClient? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "KeyboardAIBaseURL") as? String,
-              let url = URL(string: raw), url.scheme == "https" || url.scheme == "http" else { return nil }
+              let url = URL(string: raw), url.scheme == "https" || url.scheme == "http",
+              url.host?.isEmpty == false else { return nil }
         return ImproveClient(baseURL: url, installID: settings.installID)
     }
 

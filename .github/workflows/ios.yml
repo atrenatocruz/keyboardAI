@@ -29,8 +29,8 @@ jobs:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
           url="${API_BASE_URL:-https://keyboardai.example.workers.dev}"
-          # xcconfig treats // as a comment, so escape it as /$()/
-          printf 'API_BASE_URL = %s\n' "${url/:\/\//:\/\$()\/}" > Config/Secrets.xcconfig
+          # xcconfig treats // as a comment, so escape it as /$()/ (sed: bash 3.2 keeps backslashes in ${//})
+          printf 'API_BASE_URL = %s\n' "$(printf '%s' "$url" | sed 's#://#:/$()/#')" > Config/Secrets.xcconfig
           cat Config/Secrets.xcconfig
 
       - name: Generate project
@@ -101,7 +101,7 @@ jobs:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
           url="${API_BASE_URL:-https://keyboardai.example.workers.dev}"
-          printf 'API_BASE_URL = %s\n' "${url/:\/\//:\/\$()\/}" > Config/Secrets.xcconfig
+          printf 'API_BASE_URL = %s\n' "$(printf '%s' "$url" | sed 's#://#:/$()/#')" > Config/Secrets.xcconfig
 
       - name: Generate project
         working-directory: ios
@@ -125,6 +125,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             > archive.log 2>&1 || { grep -E "error:" archive.log | sort -u | head -80; tail -n 40 archive.log; exit 1; }
           grep -E "ARCHIVE SUCCEEDED" archive.log
+
+      - name: Verify API URL in keyboard
+        working-directory: ios
+        run: |
+          plist=build/KeyboardAI.xcarchive/Products/Applications/KeyboardAI.app/PlugIns/KeyboardAIKeyboard.appex/Info.plist
+          value=$(/usr/libexec/PlistBuddy -c "Print :KeyboardAIBaseURL" "$plist")
+          echo "KeyboardAIBaseURL = $value"
+          [[ "$value" =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::Invalid KeyboardAIBaseURL: $value"; exit 1; }
 
       - name: Export and upload to TestFlight
         working-directory: ios
