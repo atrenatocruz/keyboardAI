@@ -14,13 +14,15 @@ final class KeyCapView: UIView {
         }
     }
 
+    /// iOS 26 system keys are noticeably rounder than earlier releases.
+    static let cornerRadius: CGFloat = 8.5
     static let characterColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.42, alpha: 1) : .white }
     static let specialColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.27, alpha: 1) : UIColor(white: 0.68, alpha: 1) }
 
     init(key: Key) {
         self.key = key
         super.init(frame: .zero)
-        layer.cornerRadius = 5
+        layer.cornerRadius = Self.cornerRadius
         layer.cornerCurve = .continuous
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOpacity = 0.3
@@ -54,7 +56,7 @@ final class KeyCapView: UIView {
         super.layoutSubviews()
         label.frame = bounds.insetBy(dx: 2, dy: 0)
         icon.frame = bounds
-        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: 5).cgPath
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: Self.cornerRadius).cgPath
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {

@@ -108,6 +108,8 @@ final class KeyboardViewController: UIInputViewController {
         apply(engine.handle(event, contextBefore: textDocumentProxy.documentContextBeforeInput))
         keyboardView.state = engine.state
         lastSyncedContext = textDocumentProxy.documentContextBeforeInput
+        // textDidChange isn't called for our own insertions, so re-check here
+        refreshImproveAvailability()
     }
 
     func apply(_ actions: [TextAction]) {

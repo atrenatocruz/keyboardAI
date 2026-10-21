@@ -14,7 +14,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     var onKeyDown: (() -> Void)?
     var state = KeyboardState() { didSet { if state != oldValue { rebuild() } } }
     var showsNextKeyboard = true { didSet { if showsNextKeyboard != oldValue { rebuild() } } }
-    var returnTitle = "intro" { didSet { if returnTitle != oldValue { rebuild() } } }
+    /// nil → the system's ⏎ glyph (default return key type).
+    var returnTitle: String? { didSet { if returnTitle != oldValue { rebuild() } } }
     var isLocked = false { didSet { alpha = isLocked ? 0.5 : 1 } }
 
     var enableInputClicksWhenVisible: Bool { true }
@@ -85,7 +86,11 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         case .space:
             v.configure(title: "espaço", symbol: nil, fontSize: 16, accessibility: "Espaço")
         case .returnKey:
-            v.configure(title: returnTitle, symbol: nil, fontSize: 16, accessibility: returnTitle)
+            if let returnTitle {
+                v.configure(title: returnTitle, symbol: nil, fontSize: 16, accessibility: returnTitle)
+            } else {
+                v.configure(title: nil, symbol: "return", fontSize: 16, accessibility: "Nova linha")
+            }
         case .nextKeyboard:
             v.configure(title: nil, symbol: "globe", fontSize: 16, accessibility: "Teclado seguinte")
         case .page(let page):
@@ -126,7 +131,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             // Bottom row: fixed-width side keys, space takes the rest.
             let fixed: (Key) -> CGFloat = { key in
                 switch key {
-                case .returnKey: return unit * 2.2
+                case .returnKey: return unit * 2.6
                 case .space: return 0
                 default: return unit * 1.3
                 }
@@ -145,7 +150,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let side = unit * 1.3
         let middle = Array(row.dropFirst().dropLast())
         let available = width - 2 * side - 2 * keyGap
-        let w = min(unit * 1.45, (available - CGFloat(middle.count - 1) * keyGap) / CGFloat(middle.count))
+        // Letters (z…m) match the top-row key width like the system keyboard; punctuation keys are wider.
+        let preferred = middle.count >= 7 ? unit : unit * 1.45
+        let w = min(preferred, (available - CGFloat(middle.count - 1) * keyGap) / CGFloat(middle.count))
         let used = CGFloat(middle.count) * w + CGFloat(middle.count - 1) * keyGap
         var x = x0 + side + keyGap + (available - used) / 2
         var frames = [CGRect(x: x0, y: y, width: side, height: height)]
