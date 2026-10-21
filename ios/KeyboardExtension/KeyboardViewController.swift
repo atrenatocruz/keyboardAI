@@ -10,6 +10,8 @@ final class KeyboardViewController: UIInputViewController {
     let aiBar = AIBarView()
     var improveState = ImproveState()
     var lastSyncedContext: String?
+    let spellChecker = SystemSpellChecker()
+    var autocorrectState = AutocorrectState()
 
     override func loadView() {
         let input = UIInputView(frame: .zero, inputViewStyle: .keyboard)
@@ -39,6 +41,7 @@ final class KeyboardViewController: UIInputViewController {
         keyboardView.onKeyDown = { [weak self] in self?.haptics.keyTap() }
         keyboardView.onInput = { [weak self] input in self?.handle(input) }
         setUpAI()
+        setUpAutocorrect()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -75,6 +78,7 @@ final class KeyboardViewController: UIInputViewController {
             aiBar.showIdle()
         }
         refreshImproveAvailability()
+        refreshSuggestions()
     }
 
     /// Any key press clears the pending undo (spec §4).
@@ -88,11 +92,20 @@ final class KeyboardViewController: UIInputViewController {
     private func handle(_ input: KeyboardView.Input) {
         guard !improveState.isImproving else { return }
         willHandleKeyInput()
+        let pendingUndo = autocorrectState.lastCorrection
+        autocorrectState.lastCorrection = nil
         switch input {
-        case .key(.character(let c)): perform(.character(c))
-        case .key(.space): perform(.space)
-        case .key(.delete): perform(.delete)
-        case .key(.returnKey): perform(.returnKey)
+        case .key(.character(let c)):
+            autocorrectBefore(separator: c)
+            perform(.character(c))
+        case .key(.space):
+            autocorrectBefore(separator: " ")
+            perform(.space)
+        case .key(.delete):
+            if !undoAutocorrect(pendingUndo) { perform(.delete) }
+        case .key(.returnKey):
+            autocorrectBefore(separator: "\n")
+            perform(.returnKey)
         case .key(.page(let page)): perform(.switchPage(page))
         case .key(.nextKeyboard): advanceToNextInputMode()
         case .key(.shift): break
@@ -110,6 +123,7 @@ final class KeyboardViewController: UIInputViewController {
         lastSyncedContext = textDocumentProxy.documentContextBeforeInput
         // textDidChange isn't called for our own insertions, so re-check here
         refreshImproveAvailability()
+        refreshSuggestions()
     }
 
     func apply(_ actions: [TextAction]) {
