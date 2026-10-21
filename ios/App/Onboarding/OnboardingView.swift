@@ -40,7 +40,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Escreve como sempre.\nA IA dá o toque final.")
                 .font(.largeTitle.weight(.bold))
-            Text("O KeyboardAI melhora as tuas mensagens em português de Portugal, sem saíres da conversa.")
+            Text("O Tecl.ai melhora as tuas mensagens em português de Portugal, sem saíres da conversa.")
                 .font(.body)
                 .foregroundStyle(.secondary)
             ExampleCard(before: Mood.exampleInput, after: Mood.natural.exampleOutput)
@@ -54,7 +54,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Abre as Definições", systemImage: "1.circle")
                 Label("Toca em Teclados", systemImage: "2.circle")
-                Label("Ativa o KeyboardAI", systemImage: "3.circle")
+                Label("Ativa o Tecl.ai", systemImage: "3.circle")
             }
             .font(.body)
             primaryButton("Abrir Definições") { openSettings() }
@@ -73,7 +73,7 @@ struct OnboardingView: View {
                   systemImage: "lock.shield")
                 .font(.callout)
             primaryButton("Abrir Definições") { openSettings() }
-            Text("Experimenta aqui: muda para o KeyboardAI com 🌐, escreve e toca em ✨.")
+            Text("Experimenta aqui: muda para o Tecl.ai com 🌐, escreve e toca em ✨.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             TextField("boas, consegues me mandar isso?", text: $testText, axis: .vertical)
