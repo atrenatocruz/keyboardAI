@@ -17,6 +17,11 @@ struct MoodsView: View {
                     ForEach(Mood.allCases, id: \.self) { mood in
                         card(mood)
                     }
+                    // Required by the CC BY-SA 4.0 licence of the bundled word list.
+                    Text("Sugestões de palavras com base em FrequencyWords de Hermit Dave (CC BY-SA 4.0), a partir de legendas do OpenSubtitles.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 12)
                 }
                 .padding(20)
             }

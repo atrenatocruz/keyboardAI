@@ -6,20 +6,21 @@ final class LayoutTests: XCTestCase {
         row.compactMap { if case .character(let c) = $0 { return c } else { return nil } }
     }
 
-    func testLettersPageHasPortugueseQwertyWithCedilla() {
+    func testLettersPageMatchesSystemPortugueseKeyboard() {
+        // Like the system pt-PT keyboard: 9-key home row, ç lives on a long-press of c.
         let rows = KeyboardLayout.rows(for: .letters, includeNextKeyboard: true)
         XCTAssertEqual(rows.count, 4)
         XCTAssertEqual(chars(rows[0]), ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"])
-        XCTAssertEqual(chars(rows[1]), ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ç"])
+        XCTAssertEqual(chars(rows[1]), ["a", "s", "d", "f", "g", "h", "j", "k", "l"])
         XCTAssertEqual(rows[2].first, .shift)
         XCTAssertEqual(rows[2].last, .delete)
         XCTAssertEqual(chars(rows[2]), ["z", "x", "c", "v", "b", "n", "m"])
-        XCTAssertEqual(rows[3], [.page(.numbers), .nextKeyboard, .space, .returnKey])
+        XCTAssertEqual(rows[3], [.page(.numbers), .nextKeyboard, .emoji, .space, .returnKey])
     }
 
     func testNextKeyboardKeyIsOptional() {
         let rows = KeyboardLayout.rows(for: .letters, includeNextKeyboard: false)
-        XCTAssertEqual(rows[3], [.page(.numbers), .space, .returnKey])
+        XCTAssertEqual(rows[3], [.page(.numbers), .emoji, .space, .returnKey])
     }
 
     func testNumbersAndSymbolsPages() {

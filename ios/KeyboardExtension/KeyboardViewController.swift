@@ -12,6 +12,8 @@ final class KeyboardViewController: UIInputViewController {
     var lastSyncedContext: String?
     let spellChecker = SystemSpellChecker()
     var autocorrectState = AutocorrectState()
+    /// Loaded off the main thread at launch; suggestions fall back to the plain spell checker until then.
+    var wordFrequency: WordFrequency?
 
     override func loadView() {
         let input = UIInputView(frame: .zero, inputViewStyle: .keyboard)
@@ -49,6 +51,7 @@ final class KeyboardViewController: UIInputViewController {
         haptics.isEnabled = hasFullAccess && settings.hapticsEnabled
         haptics.prepare()
         lastSyncedContext = nil
+        keyboardView.resetPanels()
         syncWithDocument()
     }
 
@@ -79,6 +82,13 @@ final class KeyboardViewController: UIInputViewController {
         }
         refreshImproveAvailability()
         refreshSuggestions()
+        refreshReturnKey()
+    }
+
+    /// Like the system keyboard, ⏎ is disabled on an empty field when the app asks for it (e.g. a send box).
+    func refreshReturnKey() {
+        let proxy = textDocumentProxy
+        keyboardView.isReturnEnabled = proxy.enablesReturnKeyAutomatically != true || proxy.hasText
     }
 
     /// Any key press clears the pending undo (spec §4).
@@ -108,7 +118,11 @@ final class KeyboardViewController: UIInputViewController {
             perform(.returnKey)
         case .key(.page(let page)): perform(.switchPage(page))
         case .key(.nextKeyboard): advanceToNextInputMode()
-        case .key(.shift): break
+        case .key(.shift), .key(.emoji): break   // handled inside KeyboardView
+        case .text(let text):
+            apply([.insert(text)])
+            lastSyncedContext = nil
+            syncWithDocument()
         case .shiftTap(let doubleTap): perform(.shift(doubleTap: doubleTap))
         case .accent(let accent):
             apply([.insert(accent)])
@@ -124,6 +138,7 @@ final class KeyboardViewController: UIInputViewController {
         // textDidChange isn't called for our own insertions, so re-check here
         refreshImproveAvailability()
         refreshSuggestions()
+        refreshReturnKey()
     }
 
     func apply(_ actions: [TextAction]) {

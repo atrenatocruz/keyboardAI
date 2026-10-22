@@ -6,6 +6,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         case key(Key)
         case shiftTap(doubleTap: Bool)
         case accent(String)
+        /// Literal text from the emoji panel.
+        case text(String)
     }
 
     static let preferredHeight: CGFloat = 216
@@ -16,6 +18,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     var showsNextKeyboard = true { didSet { if showsNextKeyboard != oldValue { rebuild() } } }
     /// nil → the system's ⏎ glyph (default return key type).
     var returnTitle: String? { didSet { if returnTitle != oldValue { rebuild() } } }
+    /// false → ⏎ is dimmed and ignored (empty field with enablesReturnKeyAutomatically).
+    var isReturnEnabled = true { didSet { if isReturnEnabled != oldValue { rebuild() } } }
     var isLocked = false { didSet { alpha = isLocked ? 0.5 : 1 } }
 
     var enableInputClicksWhenVisible: Bool { true }
@@ -29,10 +33,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var repeatCount = 0
     private var lastShiftTap: Date?
 
-    private let sideMargin: CGFloat = 3
-    private let keyGap: CGFloat = 6
-    private let rowGap: CGFloat = 11
-    private let topPadding: CGFloat = 8
+    private let emojiPanel = EmojiPanelView()
+
+    // Measured from the iOS 26 system keyboard on a 393pt-wide iPhone.
+    private let sideMargin: CGFloat = 7.5
+    private let keyGap: CGFloat = 7.5
+    private let rowGap: CGFloat = 12.5
+    private let topPadding: CGFloat = 6
     private let bottomPadding: CGFloat = 4
 
     override init(frame: CGRect) {
@@ -41,7 +48,29 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         clipsToBounds = false
         addSubview(popup)
         addSubview(accentPicker)
+        emojiPanel.isHidden = true
+        emojiPanel.onEmoji = { [weak self] emoji in self?.onInput?(.text(emoji)) }
+        emojiPanel.onDelete = { [weak self] in self?.onInput?(.key(.delete)) }
+        emojiPanel.onKeyDown = { [weak self] in
+            self?.onKeyDown?()
+            UIDevice.current.playInputClick()
+        }
+        emojiPanel.onDismiss = { [weak self] in self?.setEmojiPanelVisible(false) }
+        addSubview(emojiPanel)
         rebuild()
+    }
+
+    private func setEmojiPanelVisible(_ visible: Bool) {
+        active.values.forEach(releaseKey)
+        active.removeAll()
+        emojiPanel.isHidden = !visible
+        keyViews.forEach { $0.isHidden = visible }
+        if visible { emojiPanel.reload() }
+    }
+
+    /// Called when the keyboard reappears so it always opens on the letters, like the system one.
+    func resetPanels() {
+        if !emojiPanel.isHidden { setEmojiPanelVisible(false) }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -66,6 +95,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         keyViews = keys.map { key in
             let v = KeyCapView(key: key)
             configure(v)
+            v.isHidden = !emojiPanel.isHidden
             insertSubview(v, belowSubview: popup)
             return v
         }
@@ -77,25 +107,29 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         switch v.key {
         case .character(let c):
             let text = state.page == .letters && state.shift != .off ? c.uppercased() : c
-            v.configure(title: text, symbol: nil, fontSize: 23, accessibility: text)
+            v.configure(title: text, symbol: nil, fontSize: 25, accessibility: text)
         case .shift:
             let symbol = state.shift == .capsLock ? "capslock.fill" : (state.shift == .on ? "shift.fill" : "shift")
             v.configure(title: nil, symbol: symbol, fontSize: 16, accessibility: "Maiúsculas")
+            v.isActive = state.shift != .off
         case .delete:
             v.configure(title: nil, symbol: "delete.left", fontSize: 16, accessibility: "Apagar")
         case .space:
-            v.configure(title: "espaço", symbol: nil, fontSize: 16, accessibility: "Espaço")
+            v.configure(title: nil, symbol: nil, fontSize: 16, accessibility: "Espaço")
         case .returnKey:
             if let returnTitle {
-                v.configure(title: returnTitle, symbol: nil, fontSize: 16, accessibility: returnTitle)
+                v.configure(title: returnTitle, symbol: nil, fontSize: 17, accessibility: returnTitle)
             } else {
                 v.configure(title: nil, symbol: "return", fontSize: 16, accessibility: "Nova linha")
             }
+            v.isDimmed = !isReturnEnabled
         case .nextKeyboard:
             v.configure(title: nil, symbol: "globe", fontSize: 16, accessibility: "Teclado seguinte")
+        case .emoji:
+            v.configure(title: nil, symbol: "face.smiling.inverse", fontSize: 16, accessibility: "Emoji")
         case .page(let page):
             let title = page == .letters ? "ABC" : (page == .numbers ? "123" : "#+=")
-            v.configure(title: title, symbol: nil, fontSize: 16, accessibility: title)
+            v.configure(title: title, symbol: nil, fontSize: 18, accessibility: title)
         }
     }
 
@@ -103,6 +137,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        emojiPanel.frame = bounds
         let rows = KeyboardLayout.rows(for: state.page, includeNextKeyboard: showsNextKeyboard)
         let width = bounds.width - 2 * sideMargin
         let unit = (width - 9 * keyGap) / 10
@@ -123,17 +158,19 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let isCharacter: (Key) -> Bool = { if case .character = $0 { return true } else { return false } }
 
         if row.allSatisfy(isCharacter) {
-            let w = (width - CGFloat(row.count - 1) * keyGap) / CGFloat(row.count)
-            return row.enumerated().map { CGRect(x: x0 + CGFloat($0.offset) * (w + keyGap), y: y, width: w, height: height) }
+            // Every letter key has the top-row width; shorter rows (a…l) are centered.
+            let used = CGFloat(row.count) * unit + CGFloat(row.count - 1) * keyGap
+            let start = x0 + (width - used) / 2
+            return row.enumerated().map { CGRect(x: start + CGFloat($0.offset) * (unit + keyGap), y: y, width: unit, height: height) }
         }
 
         if rowIndex == 3 {
             // Bottom row: fixed-width side keys, space takes the rest.
             let fixed: (Key) -> CGFloat = { key in
                 switch key {
-                case .returnKey: return unit * 2.6
+                case .returnKey: return unit * 2.9
                 case .space: return 0
-                default: return unit * 1.3
+                default: return unit * 1.32
                 }
             }
             let fixedTotal = row.map(fixed).reduce(0, +)
@@ -147,7 +184,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
 
         // Row with a special key on each side and characters in the middle.
-        let side = unit * 1.3
+        let side = unit * 1.37
         let middle = Array(row.dropFirst().dropLast())
         let available = width - 2 * side - 2 * keyGap
         // Letters (z…m) match the top-row key width like the system keyboard; punctuation keys are wider.
@@ -177,7 +214,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard !isLocked else { return }
+        guard !isLocked, emojiPanel.isHidden else { return }
         for touch in touches {
             // Rollover: a new touch commits any key still held.
             for (id, held) in active where id != ObjectIdentifier(touch) {
@@ -263,6 +300,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func commit(_ keyView: KeyCapView) {
         switch keyView.key {
         case .delete, .shift: break   // already handled on touch-down
+        case .emoji: setEmojiPanelVisible(true)
+        case .returnKey where !isReturnEnabled: break
         default: onInput?(.key(keyView.key))
         }
     }

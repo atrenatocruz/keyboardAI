@@ -9,6 +9,7 @@ public enum Key: Hashable, Sendable {
     case space
     case returnKey
     case nextKeyboard
+    case emoji
     case page(KeyboardPage)
 }
 
@@ -18,13 +19,13 @@ public enum KeyboardLayout {
         let punctuation = c(". , ? ! '")
         var bottom: [Key] = [page == .letters ? .page(.numbers) : .page(.letters)]
         if includeNextKeyboard { bottom.append(.nextKeyboard) }
-        bottom += [.space, .returnKey]
+        bottom += [.emoji, .space, .returnKey]
 
         switch page {
         case .letters:
             return [
                 c("q w e r t y u i o p"),
-                c("a s d f g h j k l ç"),
+                c("a s d f g h j k l"),
                 [.shift] + c("z x c v b n m") + [.delete],
                 bottom,
             ]

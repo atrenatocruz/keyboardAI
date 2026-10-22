@@ -10,8 +10,17 @@ struct AutocorrectState {
 
 extension KeyboardViewController {
     func setUpAutocorrect() {
-        aiBar.onSuggestion = { [weak self] word, isTyped in self?.acceptSuggestion(word, isTyped: isTyped) }
+        aiBar.onSuggestion = { [weak self] tap in self?.acceptSuggestion(tap) }
         requestSupplementaryLexicon { [weak self] lexicon in self?.spellChecker.load(lexicon) }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let url = Bundle.main.url(forResource: "pt_PT_words", withExtension: "txt"),
+                  let text = try? String(contentsOf: url, encoding: .utf8) else { return }
+            let frequency = WordFrequency(text: text)
+            DispatchQueue.main.async {
+                self?.wordFrequency = frequency
+                self?.refreshSuggestions()
+            }
+        }
     }
 
     private var isAutocorrectAllowed: Bool {
@@ -34,8 +43,14 @@ extension KeyboardViewController {
     }
 
     private func currentSuggestions() -> Suggestions? {
-        guard isAutocorrectAllowed, let word = wordBeforeCursor else { return nil }
-        return Autocorrect.suggestions(for: word, checker: spellChecker, rejected: autocorrectState.rejected)
+        guard isAutocorrectAllowed else { return nil }
+        if let word = wordBeforeCursor {
+            return Autocorrect.suggestions(for: word, checker: spellChecker, frequency: wordFrequency,
+                                           rejected: autocorrectState.rejected)
+        }
+        guard let wordFrequency, textDocumentProxy.selectedText?.isEmpty ?? true else { return nil }
+        return Autocorrect.predictions(after: textDocumentProxy.documentContextBeforeInput,
+                                       checker: spellChecker, frequency: wordFrequency)
     }
 
     func refreshSuggestions() {
@@ -47,9 +62,10 @@ extension KeyboardViewController {
     func autocorrectBefore(separator: String) {
         guard Autocorrect.triggers(on: separator),
               let suggestions = currentSuggestions(),
+              let typed = suggestions.typed,
               let fix = suggestions.autocorrection else { return }
-        apply(Autocorrect.replaceActions(word: suggestions.typed, with: fix))
-        autocorrectState.lastCorrection = (suggestions.typed, fix, separator)
+        apply(Autocorrect.replaceActions(word: typed, with: fix))
+        autocorrectState.lastCorrection = (typed, fix, separator)
     }
 
     /// Delete right after an autocorrection restores what was typed (and stops correcting that word).
@@ -64,16 +80,25 @@ extension KeyboardViewController {
         return true
     }
 
-    private func acceptSuggestion(_ word: String, isTyped: Bool) {
-        guard !improveState.isImproving, let typed = wordBeforeCursor else { return }
+    private func acceptSuggestion(_ tap: AIBarView.SuggestionTap) {
+        guard !improveState.isImproving else { return }
         willHandleKeyInput()
         autocorrectState.lastCorrection = nil
         haptics.keyTap()
-        if isTyped {
-            spellChecker.learn(typed)
-            autocorrectState.rejected.insert(typed.lowercased())
-        } else {
+        switch tap {
+        case .keep(let word):
+            guard wordBeforeCursor == word else { return }
+            spellChecker.learn(word)
+            autocorrectState.rejected.insert(word.lowercased())
+        case .replace(let word):
+            guard let typed = wordBeforeCursor else { return }
             apply(Autocorrect.replaceActions(word: typed, with: word))
+        case .insert(let word):
+            // Predictions follow a space; after punctuation like "," add the space first.
+            if let last = textDocumentProxy.documentContextBeforeInput?.last, !last.isWhitespace {
+                apply([.insert(" ")])
+            }
+            apply([.insert(word)])
         }
         perform(.space)
     }
